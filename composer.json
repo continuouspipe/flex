@@ -1,0 +1,8 @@
+{
+    "name": "continuous-pipe/flex",
+    "autoload": {
+        "psr-0": {
+            "ContinuousPipe\\Flex\\": "src/"
+        }
+    }
+}
