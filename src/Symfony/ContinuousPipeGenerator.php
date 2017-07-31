@@ -127,11 +127,13 @@ class ContinuousPipeGenerator implements ConfigurationFileGenerator
         // Sort tasks by name
         ksort($tasks);
 
+        $defaults = array_merge([
+            'cluster' => $context['cluster'],
+        ], isset($context['continuous_pipe_defaults']) ? $context['continuous_pipe_defaults'] : []);
+
         return Yaml::dump([
             'variables' => $this->generateVariables($context),
-            'defaults' => [
-                'cluster' => $context['cluster'],
-            ],
+            'defaults' => $defaults,
             'tasks' => $tasks,
         ]);
     }
