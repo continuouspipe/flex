@@ -1,0 +1,5 @@
+{
+    "bundles": {
+        "ContinuousPipe\\Flex\\Bridge\\Symfony\\ContinuousPipeFlexBundle": ["dev"]
+    }
+}
