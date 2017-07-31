@@ -1,8 +1,20 @@
 {
     "name": "continuous-pipe/flex",
     "autoload": {
-        "psr-0": {
+        "psr-4": {
             "ContinuousPipe\\Flex\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ContinuousPipe\\Flex\\": "tests/"
+        }
+    },
+    "require": {
+        "league/flysystem": "^1.0",
+        "symfony/dotenv": "^3.3"
+    },
+    "require-dev": {
+        "behat/behat": "^3.3"
     }
 }
