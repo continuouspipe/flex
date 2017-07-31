@@ -22,17 +22,17 @@ final class GenerateFilesAsPerGeneratorMapping implements ConfigurationFileColle
     /**
      * {@inheritdoc}
      */
-    public function generate(FilesystemInterface $fileSystem, array $configuration)
+    public function generate(FilesystemInterface $fileSystem, array $context = [])
     {
-        return array_map(function (ConfigurationFileGenerator $generator) use ($fileSystem, $configuration) {
-            return $generator->generate($fileSystem, $configuration);
+        return array_map(function (ConfigurationFileGenerator $generator) use ($fileSystem, $context) {
+            return $generator->generate($fileSystem, $context);
         }, $this->fileGeneratorMapping);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function checkAvailability(FilesystemInterface $fileSystem, array $configuration)
+    public function checkAvailability(FilesystemInterface $fileSystem, array $context = [])
     {
         return null;
     }

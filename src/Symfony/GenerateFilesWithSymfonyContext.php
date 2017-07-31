@@ -26,21 +26,21 @@ final class GenerateFilesWithSymfonyContext implements ConfigurationFileCollecti
     /**
      * {@inheritdoc}
      */
-    public function generate(FilesystemInterface $fileSystem, array $configuration)
+    public function generate(FilesystemInterface $fileSystem, array $context = [])
     {
         try {
-            $configuration['env'] = (new Dotenv())->parse($fileSystem->read('.env.dist'));
+            $context['env'] = (new Dotenv())->parse($fileSystem->read('.env.dist'));
         } catch (FileNotFoundException $e) {
             throw new AvailabilityException('File `.env.dist` do not exists in your repository');
         }
 
-        return $this->decoratedGenerator->generate($fileSystem, $configuration);
+        return $this->decoratedGenerator->generate($fileSystem, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function checkAvailability(FilesystemInterface $fileSystem, array $configuration)
+    public function checkAvailability(FilesystemInterface $fileSystem, array $context = [])
     {
         try {
             $composerFile = $fileSystem->read('composer.json');
