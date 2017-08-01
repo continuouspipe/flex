@@ -1,17 +1,18 @@
 <?php
 
-namespace ContinuousPipe\Flex\Symfony;
+namespace ContinuousPipe\Flex\ConfigurationGeneration\Symfony;
 
-use ContinuousPipe\Flex\ConfigurationFileGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\FileGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\GeneratedFile;
 use League\Flysystem\FilesystemInterface;
 use Symfony\Component\Yaml\Yaml;
 
-final class DockerComposeGenerator implements ConfigurationFileGenerator
+final class DockerComposeGenerator implements FileGenerator
 {
     /**
      * {@inheritdoc}
      */
-    public function generate(FilesystemInterface $filesystem, array $context)
+    public function generate(FilesystemInterface $filesystem, array $context) : array
     {
         $dockerComposeServices = [];
         if (isset($context['env']['DATABASE_URL'])) {
@@ -46,7 +47,9 @@ final class DockerComposeGenerator implements ConfigurationFileGenerator
         ];
 
 
-        return Yaml::dump($dockerComposeFile);
+        return [
+            GeneratedFile::generated('docker-compose.yml', Yaml::dump($dockerComposeFile)),
+        ];
     }
 
     private function generateDockerComposeEnvironmentFromVariables(array $variables) : array

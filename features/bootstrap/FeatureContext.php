@@ -2,13 +2,14 @@
 
 use Behat\Behat\Context\Context;
 use Behat\Gherkin\Node\PyStringNode;
-use ContinuousPipe\Flex\ConfigurationFileCollectionGenerator;
-use ContinuousPipe\Flex\GenerateFilesAsPerGeneratorMapping;
+use ContinuousPipe\Flex\ConfigurationGeneration\ConfigurationGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\GeneratedConfiguration;
+use ContinuousPipe\Flex\ConfigurationGeneration\Sequentially\SequentiallyGenerateFiles;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\Context\WithSymfonyContext;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\ContinuousPipeGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\DockerComposeGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\DockerGenerator;
 use ContinuousPipe\Flex\FileSystem\OverwrittenFileSystem;
-use ContinuousPipe\Flex\Symfony\ContinuousPipeGenerator;
-use ContinuousPipe\Flex\Symfony\DockerComposeGenerator;
-use ContinuousPipe\Flex\Symfony\DockerGenerator;
-use ContinuousPipe\Flex\Symfony\GenerateFilesWithSymfonyContext;
 use ContinuousPipe\Flex\Variables\PlainDefinitionGenerator;
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
@@ -21,9 +22,9 @@ use Symfony\Component\Yaml\Yaml;
 class FeatureContext implements Context
 {
     /**
-     * @var ConfigurationFileCollectionGenerator
+     * @var ConfigurationGenerator
      */
-    private $configurationFileCollectionGenerator;
+    private $configurationGenerator;
 
     /**
      * @var FilesystemInterface|null
@@ -31,17 +32,17 @@ class FeatureContext implements Context
     private $fileSystem;
 
     /**
-     * @var array|null
+     * @var GeneratedConfiguration|null
      */
-    private $generatedFiles;
+    private $generatedConfiguration;
 
     public function __construct()
     {
-        $this->configurationFileCollectionGenerator = new GenerateFilesWithSymfonyContext(
-            new GenerateFilesAsPerGeneratorMapping([
-                'Dockerfile' => new DockerGenerator(),
-                'docker-compose.yml' => new DockerComposeGenerator(),
-                'continuous-pipe.yml' => new ContinuousPipeGenerator(new PlainDefinitionGenerator()),
+        $this->configurationGenerator = new WithSymfonyContext(
+            new SequentiallyGenerateFiles([
+                new DockerGenerator(),
+                new DockerComposeGenerator(),
+                new ContinuousPipeGenerator(new PlainDefinitionGenerator()),
             ])
         );
     }
@@ -73,7 +74,7 @@ class FeatureContext implements Context
      */
     public function iGenerateTheConfigurationFiles()
     {
-        $this->generatedFiles = $this->configurationFileCollectionGenerator->generate(
+        $this->generatedConfiguration = $this->configurationGenerator->generate(
             $this->fileSystem,
             [
                 'endpoint_host_suffix' => 'my-app',
@@ -116,11 +117,17 @@ class FeatureContext implements Context
 
     private function getGeneratedContents(string $fileName) : string
     {
-        if (!isset($this->generatedFiles[$fileName])) {
-            throw new \RuntimeException('File is not found');
+        foreach ($this->generatedConfiguration->getGeneratedFiles() as $generatedFile) {
+            if ($generatedFile->getPath() == $fileName) {
+                if ($generatedFile->hasFailed()) {
+                    throw new \RuntimeException('Generation failed: '.$generatedFile->getFailureReason());
+                }
+                
+                return $generatedFile->getContents();
+            }
         }
 
-        return $this->generatedFiles[$fileName];
+        throw new \RuntimeException('File is not found');
     }
 }
 

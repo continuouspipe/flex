@@ -1,8 +1,10 @@
 <?php
 
-namespace ContinuousPipe\Flex\Symfony;
+namespace ContinuousPipe\Flex\ConfigurationGeneration\Symfony;
 
 use ContinuousPipe\Flex\ConfigurationFileGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\FileGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\GeneratedFile;
 use ContinuousPipe\Flex\FlexException;
 use ContinuousPipe\Flex\Variables\VariableDefinitionGenerator;
 use League\Flysystem\FilesystemInterface;
@@ -18,7 +20,7 @@ use Symfony\Component\Yaml\Yaml;
  * - `variables` (default variable values)
  *
  */
-class ContinuousPipeGenerator implements ConfigurationFileGenerator
+class ContinuousPipeGenerator implements FileGenerator
 {
     /**
      * @var VariableDefinitionGenerator
@@ -36,7 +38,7 @@ class ContinuousPipeGenerator implements ConfigurationFileGenerator
     /**
      * {@inheritdoc}
      */
-    public function generate(FilesystemInterface $filesystem, array $context)
+    public function generate(FilesystemInterface $filesystem, array $context) : array
     {
         // Adding (for now) all the environment variables as build arguments as well.
         // This could/should be prevented in the future.
@@ -131,11 +133,13 @@ class ContinuousPipeGenerator implements ConfigurationFileGenerator
             'cluster' => $context['cluster'],
         ], isset($context['continuous_pipe_defaults']) ? $context['continuous_pipe_defaults'] : []);
 
-        return Yaml::dump([
-            'variables' => $this->generateVariables($context),
-            'defaults' => $defaults,
-            'tasks' => $tasks,
-        ]);
+        return [
+            GeneratedFile::generated('continuous-pipe.yml', Yaml::dump([
+                'variables' => $this->generateVariables($context),
+                'defaults' => $defaults,
+                'tasks' => $tasks,
+            ])),
+        ];
     }
 
     private function generateVariables($context)
@@ -148,6 +152,7 @@ class ContinuousPipeGenerator implements ConfigurationFileGenerator
         foreach ($context['variables'] as $name => $value) {
             $variableDefinitions[] = $this->variableDefinitionGenerator->generateDefinition($name, $value);
         }
+
         return $variableDefinitions;
     }
 }

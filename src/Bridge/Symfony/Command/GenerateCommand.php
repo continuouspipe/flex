@@ -2,12 +2,12 @@
 
 namespace ContinuousPipe\Flex\Bridge\Symfony\Command;
 
-use ContinuousPipe\Flex\FlexException;
-use ContinuousPipe\Flex\GenerateFilesAsPerGeneratorMapping;
-use ContinuousPipe\Flex\Symfony\ContinuousPipeGenerator;
-use ContinuousPipe\Flex\Symfony\DockerComposeGenerator;
-use ContinuousPipe\Flex\Symfony\DockerGenerator;
-use ContinuousPipe\Flex\Symfony\GenerateFilesWithSymfonyContext;
+use ContinuousPipe\Flex\ConfigurationGeneration\GenerationException;
+use ContinuousPipe\Flex\ConfigurationGeneration\Sequentially\SequentiallyGenerateFiles;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\Context\WithSymfonyContext;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\ContinuousPipeGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\DockerComposeGenerator;
+use ContinuousPipe\Flex\ConfigurationGeneration\Symfony\DockerGenerator;
 use ContinuousPipe\Flex\Variables\PlainDefinitionGenerator;
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
@@ -27,14 +27,14 @@ class GenerateCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $generatorMapping = [
-            'Dockerfile' => new DockerGenerator(),
-            'docker-compose.yml' => new DockerComposeGenerator(),
+        $generators = [
+            new DockerGenerator(),
+            new DockerComposeGenerator(),
         ];
 
         $context = [];
         if ($this->askIf($input, $output, 'Do you want to generate the ContinuousPipe configuration? ', true)) {
-            $generatorMapping['continuous-pipe.yml'] = new ContinuousPipeGenerator(new PlainDefinitionGenerator());
+            $generators[] = new ContinuousPipeGenerator(new PlainDefinitionGenerator());
 
             $questionHelper = new QuestionHelper();
             $context['image_name'] = $questionHelper->ask($input, $output, new Question('What is the Docker image name you want to build? ', 'docker.io/your-username/image-name'));
@@ -44,23 +44,13 @@ class GenerateCommand extends Command
         }
 
         $fileSystem = new Filesystem(new Local(getcwd()));
-        $generator = new GenerateFilesWithSymfonyContext(
-            new GenerateFilesAsPerGeneratorMapping($generatorMapping)
+        $generator = new WithSymfonyContext(
+            new SequentiallyGenerateFiles($generators)
         );
 
-        if (null !== ($error = $generator->checkAvailability($fileSystem, $context))) {
-            $output->writeln([
-                '',
-                '<error>'.$error->getMessage().'</error>',
-                '',
-            ]);
-
-            return 1;
-        }
-
         try {
-            $files = $generator->generate($fileSystem, $context);
-        } catch (FlexException $error) {
+            $generatedConfiguration = $generator->generate($fileSystem, $context);
+        } catch (GenerationException $error) {
             $output->writeln([
                 '',
                 '<error>'.$error->getMessage().'</error>',
@@ -71,15 +61,25 @@ class GenerateCommand extends Command
         }
 
         $wroteFiles = [];
-        foreach ($files as $filePath => $contents) {
-            if ($fileSystem->has($filePath)) {
-                if (!$this->askIf($input, $output, sprintf('Do you want to overwrite your "%s" file? ', $filePath))) {
+        foreach ($generatedConfiguration->getGeneratedFiles() as $generatedFile) {
+            if ($generatedFile->hasFailed()) {
+                $output->writeln([
+                    '',
+                    '<error>Generation of file '.$generatedFile->getPath().' has failed: '.$generatedFile->getFailureReason().'</error>',
+                    '',
+                ]);
+
+                break;
+            }
+
+            if ($fileSystem->has($generatedFile->getPath())) {
+                if (!$this->askIf($input, $output, sprintf('Do you want to overwrite your "%s" file? ', $generatedFile->getPath()))) {
                     continue;
                 }
             }
 
-            $fileSystem->write($filePath, $contents);
-            $wroteFiles[] = $filePath;
+            $fileSystem->write($generatedFile->getPath(), $generatedFile->getContents());
+            $wroteFiles[] = $generatedFile->getPath();
         }
 
         $output->writeln([
