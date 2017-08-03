@@ -138,7 +138,7 @@ class ContinuousPipeGenerator implements FileGenerator
                 'variables' => $this->generateVariables($context),
                 'defaults' => $defaults,
                 'tasks' => $tasks,
-            ])),
+            ], 6)),
         ];
     }
 

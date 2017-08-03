@@ -48,7 +48,7 @@ final class DockerComposeGenerator implements FileGenerator
 
 
         return [
-            GeneratedFile::generated('docker-compose.yml', Yaml::dump($dockerComposeFile)),
+            GeneratedFile::generated('docker-compose.yml', Yaml::dump($dockerComposeFile, 6)),
         ];
     }
 
