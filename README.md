@@ -19,7 +19,7 @@ composer req continuous-pipe/flex
 ```
 
 ```
-bin/cp generate:configuration
+bin/console generate:configuration
 ```
 
 ### In ContinuousPipe
