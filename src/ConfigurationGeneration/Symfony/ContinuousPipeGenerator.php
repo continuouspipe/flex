@@ -15,8 +15,6 @@ use Symfony\Component\Yaml\Yaml;
  *
  * This generator relies on the following context variables:
  * - `image_name` (the Docker image name)
- * - `endpoint_host_suffix` (the host endpoint to be used as ingress)
- * - `cluster` (the cluster name)
  * - `variables` (default variable values)
  *
  */
@@ -55,26 +53,6 @@ class ContinuousPipeGenerator implements FileGenerator
                 'endpoints' => [
                     [
                         'name' => 'app',
-                        'cloud_flare_zone' => [
-                            'zone_identifier' => '${CLOUD_FLARE_ZONE}',
-                            'proxied' => true,
-                            'authentication' => [
-                                'email' => '${CLOUD_FLARE_EMAIL}',
-                                'api_key' => '${CLOUD_FLARE_API_KEY}',
-                            ]
-                        ],
-                        'ingress' => [
-                            'class' => 'nginx',
-                            'host_suffix' => $context['endpoint_host_suffix'],
-                        ],
-                        'ssl_certificates' => [
-                            [
-                                // Self-sign SSL certificates will be generated automatically by ContinuousPipe
-                                'name' => 'automatic',
-                                'cert' => 'automatic',
-                                'key' => 'automatic',
-                            ]
-                        ]
                     ]
                 ],
                 'deployment_strategy' => [
@@ -85,10 +63,6 @@ class ContinuousPipeGenerator implements FileGenerator
                 ],
             ]
         ];
-
-        // Uses CloudFlare to terminate the SSL connection
-        $appDeployServices['app']['endpoints'][0]['cloud_flare_zone']['proxied'] = true;
-        $context['env']['WEB_REVERSE_PROXIED'] = true;
 
         $tasks = [
             '00_images' => [
@@ -129,9 +103,9 @@ class ContinuousPipeGenerator implements FileGenerator
         // Sort tasks by name
         ksort($tasks);
 
-        $defaults = array_merge([
+        $defaults = array_merge([], isset($context['cluster']) ? [
             'cluster' => $context['cluster'],
-        ], isset($context['continuous_pipe_defaults']) ? $context['continuous_pipe_defaults'] : []);
+        ] : [], isset($context['continuous_pipe_defaults']) ? $context['continuous_pipe_defaults'] : []);
 
         return [
             GeneratedFile::generated('continuous-pipe.yml', Yaml::dump([
