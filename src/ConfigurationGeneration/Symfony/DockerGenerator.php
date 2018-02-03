@@ -37,11 +37,11 @@ final class DockerGenerator implements FileGenerator
         }
 
         $dockerFileLines = [
-            'FROM quay.io/continuouspipe/symfony-flex:latest',
+            'FROM quay.io/continuouspipe/symfony-pack:latest',
         ];
 
         foreach ($context['env'] as $key => $value) {
-            $dockerFileLines[] = 'ARG '.$key;
+            $dockerFileLines[] = 'ARG '.$key.'=';
         }
 
         $dockerFileLines[] = 'COPY . /app/';
